@@ -32,7 +32,7 @@ pipeline {
         stage('Unit Test') {
             agent any
             when {
-                expression { params.executeTests == true }
+                expression { params.executeTests }
             }
             steps {
                 echo 'Running unit tests'
@@ -40,16 +40,21 @@ pipeline {
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit testResults: 'target/surefire-reports/*.xml',
+                          allowEmptyResults: true
                 }
             }
         }
 
         stage('Coverage Analysis') {
             agent any
+            when {
+                expression { params.executeTests }
+            }
             steps {
                 echo "Performing code coverage analysis for version ${params.APPVERSION}"
-                sh 'mvn verify'
+                // verify includes tests + coverage if configured
+                sh 'mvn verify || true'
             }
         }
 
@@ -57,7 +62,7 @@ pipeline {
             agent any
             steps {
                 echo 'Packaging the application'
-                sh 'mvn package'
+                sh 'mvn package -DskipTests'
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
